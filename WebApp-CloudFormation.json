@@ -1,0 +1,388 @@
+{
+    "Resources": {
+        "Lab01": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.0.0.0/16"
+            }
+        },
+
+        "ServerTier1": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": { "Ref": "Lab01" },
+                "CidrBlock": "10.0.10.0/24",
+                "AvailabilityZone": "us-east-1a"
+            }
+        },
+
+        "ServerTier2": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": { "Ref": "Lab01" },
+                "CidrBlock": "10.0.20.0/24",
+                "AvailabilityZone": "us-east-1b"
+            }
+        },
+
+        "PublicTier1": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": { "Ref": "Lab01" },
+                "CidrBlock": "10.0.1.0/24",
+                "AvailabilityZone": "us-east-1a"
+            }
+        },
+
+        "PublicTier2": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": { "Ref": "Lab01" },
+                "CidrBlock": "10.0.2.0/24",
+                "AvailabilityZone": "us-east-1b"
+            }
+        },
+
+        "IG": {
+            "Type": "AWS::EC2::InternetGateway"
+        },
+
+        "AttachGateway": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "VpcId": { "Ref": "Lab01" },
+                "InternetGatewayId": { "Ref": "IG" }
+            }
+        },
+
+        "RouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": { "Ref": "Lab01" }
+            }
+        },
+
+        "Route": {
+            "Type": "AWS::EC2::Route",
+            "DependsOn": "AttachGateway",
+            "Properties": {
+                "RouteTableId": { "Ref": "RouteTable" },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": { "Ref": "IG" }
+            }
+        },
+
+        "SubnetRTAssociationPublicTier1": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "RouteTable"
+                },
+                "SubnetId": {
+                    "Ref": "PublicTier1"
+                }
+            }
+        },
+
+        "SubnetRTAssociationPublicTier2": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "RouteTable"
+                },
+                "SubnetId": {
+                    "Ref": "PublicTier2"
+                }
+            }
+        },
+
+        "SubnetRTAssociationServerTier1": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "RouteTable"
+                },
+                "SubnetId": {
+                    "Ref": "ServerTier1"
+                }
+            }
+        },
+
+        "SubnetRTAssociationServerTier2": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "RouteTable"
+                },
+                "SubnetId": {
+                    "Ref": "ServerTier2"
+                }
+            }
+        },
+
+        "SGServer": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Security group for EC2 Server",
+                "VpcId": { "Ref": "Lab01" },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "SourceSecurityGroupId": { "Ref": "SGBastion" }
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "SourceSecurityGroupId": { "Ref": "SGPublic" }
+                    }
+                ]
+            }
+        },
+
+        "SGPublic": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Security group for Load Balancer",
+                "VpcId": { "Ref": "Lab01" },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+
+        "SGBastion": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Security group for EC2 Bastion",
+                "VpcId": { "Ref": "Lab01" },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+
+        "MyKeyPair": {
+            "Type": "AWS::EC2::KeyPair",
+            "Properties": {
+                "KeyName": "mykeypair",
+                "PublicKeyMaterial":"ADD PRIVATE KEY"
+            }
+        },
+
+        "Server1": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "InstanceType": "t2.micro",
+                "ImageId": "ami-0557a15b87f6559cf",
+                "KeyName": "mykeypair",
+                "AvailabilityZone": "us-east-1a",
+                "NetworkInterfaces": [
+                    {
+                        "AssociatePublicIpAddress": true,
+                        "DeviceIndex": "0",
+                        "DeleteOnTermination": true,
+                        "SubnetId": { "Ref": "ServerTier1" },
+                        "GroupSet": [ { "Ref": "SGServer" } ]
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash\n",
+                                "sudo apt-get update -y \n",
+                                "sudo apt install -y apache2\n",
+                                "sudo systemctl start apache2\n",
+                                "sudo mv /var/www/html/index.html /var/www/html/index.original.html\n",
+                                "sudo touch /var/www/html/index.html\n",
+                                "sudo echo '<html><h1>Web Server 1</h1></html>' >> /var/www/html/index.html\n"
+                            ]
+                        ]
+                    }
+                }
+            }
+        },
+
+        "Server2": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "InstanceType": "t2.micro",
+                "ImageId": "ami-0557a15b87f6559cf",
+                "KeyName": "mykeypair",
+                "AvailabilityZone": "us-east-1b",
+                "NetworkInterfaces": [
+                    {
+                        "AssociatePublicIpAddress": true,
+                        "DeviceIndex": "0",
+                        "DeleteOnTermination": true,
+                        "SubnetId": { "Ref": "ServerTier2" },
+                        "GroupSet": [ { "Ref": "SGServer" } ]
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash\n",
+                                "sudo apt-get update -y \n",
+                                "sudo apt install -y apache2\n",
+                                "sudo systemctl start apache2\n",
+                                "sudo mv /var/www/html/index.html /var/www/html/index.original.html\n",
+                                "sudo touch /var/www/html/index.html\n",
+                                "sudo echo '<html><h1>Web Server 2</h1></html>' >> /var/www/html/index.html\n"
+                            ]
+                        ]
+                    }
+                }
+            }
+        },
+        "Bastion": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "InstanceType": "t2.micro",
+                "ImageId": "ami-0557a15b87f6559cf",
+                "KeyName": "mykeypair",
+                "NetworkInterfaces": [
+                    {
+                        "AssociatePublicIpAddress": true,
+                        "DeviceIndex": "0",
+                        "DeleteOnTermination": true,
+                        "SubnetId": { "Ref": "PublicTier1" },
+                        "GroupSet": [ { "Ref": "SGBastion" } ]
+                    }
+                ]
+            }
+        },
+
+        "LoadBalancer": {
+            "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+            "Properties": {
+                "Type": "application",
+                "Name": "ALB-Web",
+                "Scheme": "internet-facing",
+                "IpAddressType": "ipv4",
+                "SecurityGroups": [ { "Ref": "SGPublic" } ],
+                "Subnets": [
+                    {"Ref" : "PublicTier1"},
+                    {"Ref" : "PublicTier2"}
+                ]
+            }
+        },
+
+        "HttpListener": {
+            "Type": "AWS::ElasticLoadBalancingV2::Listener",
+            "Properties": {
+                "DefaultActions": [
+                    {
+                        "Type" : "forward",
+                        "TargetGroupArn": { "Ref": "MyTargetGroup" }
+                    }
+                ],
+                "LoadBalancerArn": {
+                    "Ref": "LoadBalancer"
+                },
+                "Port": 80,
+                "Protocol": "HTTP"
+            }
+        },
+
+        "MyTargetGroup": {
+            "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+            "Properties": {
+                "Name": "MyTargetGroup",
+                "Port": 80,
+                "Protocol": "HTTP",
+                "TargetType": "instance",
+                "VpcId": { "Ref": "Lab01" },
+                "Targets": [
+                    {
+                    "Id" : { "Ref": "Server1" },
+                    "Port" : 80
+                    },
+                    {
+                    "Id" : { "Ref": "Server2" },
+                    "Port" : 80
+                    }
+                ]
+            }
+        },
+
+        "MyTrail": {
+            "Type": "AWS::CloudTrail::Trail",
+            "Properties": {
+              "IsMultiRegionTrail": true,
+              "S3BucketName": {"Ref": "BucketLog"},
+              "IncludeGlobalServiceEvents": true,
+              "IsLogging": true,
+              "EnableLogFileValidation": true
+            }
+          },
+
+          "BucketLog": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+              "BucketName": "my-s3-bucket-0557a15b87f6559cf",
+              "AccessControl": "LogDeliveryWrite",
+              "BucketEncryption": {
+                "ServerSideEncryptionConfiguration": [
+                  {
+                    "ServerSideEncryptionByDefault": {
+                      "SSEAlgorithm": "AES256"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          
+          "BucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+            "Properties": {
+              "Bucket": { "Ref": "BucketLog" },
+              "PolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Sid": "AWSCloudTrailAclCheck",
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": "cloudtrail.amazonaws.com"
+                    },
+                    "Action": "s3:GetBucketAcl",
+                    "Resource": { "Fn::Join": ["", ["arn:aws:s3:::", { "Ref": "BucketLog" }]] }
+                  },
+                  {
+                    "Sid": "AWSCloudTrailWrite",
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": "cloudtrail.amazonaws.com"
+                    },
+                    "Action": "s3:PutObject",
+                    "Resource": { "Fn::Join": ["", ["arn:aws:s3:::", { "Ref": "BucketLog" }, "/AWSLogs/", { "Ref": "AWS::AccountId" }, "/*"]] },
+                    "Condition": {
+                      "StringEquals": {
+                        "s3:x-amz-acl": "bucket-owner-full-control"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+        }
+    }
+}
