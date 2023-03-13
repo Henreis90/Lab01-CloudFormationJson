@@ -29,6 +29,7 @@ WebApp-CloudFormation.json
 
 1 pair of keys to connect to EC2 instances via SSH.
 
+# Warning!
 Before sending the template to deploy, change the "PublicKeyMaterial" field with a unique private key. Import this key into AWS before running the template. See the following example:
 
         "MyKeyPair": {
