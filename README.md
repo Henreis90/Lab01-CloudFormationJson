@@ -5,6 +5,10 @@ I provide the CloudFormation template in JSON for creating all lab resources.
 # AWS CloudFormation Template
 WebApp-CloudFormation.json
 
+
+Lab-AWS-01.drawio.png
+
+
 # Resources created:
 
 2 EC2 instances running the web application with Apache.
