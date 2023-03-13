@@ -6,7 +6,7 @@ I provide the CloudFormation template in JSON for creating all lab resources.
 WebApp-CloudFormation.json
 
 # Architecture
-![alt text]([https://raw.githubusercontent.com/username/projectname/branch/path/to/img.png](https://github.com/Henreis90/Lab01-CloudFormationJson/blob/main/Lab-AWS-01.drawio.png))
+![alt text](https://github.com/Henreis90/Lab01-CloudFormationJson/blob/main/Lab-AWS-01.drawio.png)
 
 [Lab-AWS-01.drawio.png](https://github.com/Henreis90/Lab01-CloudFormationJson/blob/main/Lab-AWS-01.drawio.png)
 
